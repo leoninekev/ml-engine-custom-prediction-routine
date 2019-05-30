@@ -14,12 +14,13 @@ import tensorflow as tf
 
 class Predictor(object):
     """Interface for constructing custom predictors."""
-    def __init__(self,config):
-        self._config = config#loads the config file instance generated after training
+    def __init__(self,model_path, config):
+        self.path= model_path
+        self._config = config#loads a dictionary, thus values are accessed as config['xyz'] instead config.xyz(Now replacing every config.xyz with config['xyz'])
 
     def format_img_size(self, img):#, C):#140519
         """ formats the image size based on config """
-        img_min_side = float(self._config.im_size)
+        img_min_side = float(self._config['im_size'])
         (height,width,_) = img.shape
         if width <= height:
             ratio = img_min_side/width
@@ -76,17 +77,18 @@ class Predictor(object):
             A list of outputs containing the prediction results. This list must
             be JSON serializable.
         """
-        if self._config.network == 'resnet50':
+        if self._config['network'] == 'resnet50':
             import resnet as nn
             num_features = 1024
-        elif self._config.network == 'vgg':
+        elif self._config['network'] == 'vgg':
             import vgg as nn
             num_features = 512
         #turn off any data augmentation at test time
-        self._config.use_horizontal_flips = False
-        self._config.use_vertical_flips = False
-        self._config.rot_90 = False
-        class_mapping = self._config.class_mapping
+        self._config['use_horizontal_flips'] = False
+        self._config['use_vertical_flips'] = False
+        self._config['rot_90'] = False
+
+        class_mapping = self._config['class_mapping']
 
         if 'bg' not in class_mapping:
             class_mapping['bg'] = len(class_mapping)
@@ -95,7 +97,7 @@ class Predictor(object):
         
         #print(class_mapping)
         class_to_color = {class_mapping[v]: np.random.randint(0, 255, 3) for v in class_mapping}
-        self._config.num_rois = 32#140519
+        self._config['num_rois'] = 32#140519
 
         if K.image_dim_ordering() == 'th':
             input_shape_img = (3, None, None)
@@ -106,25 +108,25 @@ class Predictor(object):
 
         ####this all could be moved to classmethod below later
         img_input = Input(shape=input_shape_img)
-        roi_input = Input(shape=(self._config.num_rois, 4))
+        roi_input = Input(shape=(self._config['num_rois'], 4))
         feature_map_input = Input(shape=input_shape_features)
 
         # define the base network (resnet here, can be VGG, Inception, etc)
         shared_layers = nn.nn_base(img_input, trainable=True)
         # define the RPN, built on the base layers
 
-        num_anchors = len(self._config.anchor_box_scales) * len(self._config.anchor_box_ratios)
+        num_anchors = len(self._config['anchor_box_scales']) * len(self._config['anchor_box_ratios'])
         rpn_layers = nn.rpn(shared_layers, num_anchors)
 
-        classifier = nn.classifier(feature_map_input, roi_input, self._config.num_rois, nb_classes=len(class_mapping), trainable=True)
+        classifier = nn.classifier(feature_map_input, roi_input, self._config['num_rois'], nb_classes=len(class_mapping), trainable=True)
 
         model_rpn = Model(img_input, rpn_layers)
 
         model_classifier = Model([feature_map_input, roi_input], classifier)
     
         #150519 #explicit model_path could also be given to folder actually holding weights
-        model_rpn.load_weights(self._config.model_path, by_name=True)#model_path is './model_frcnn.hdf5'
-        model_classifier.load_weights(self._config.model_path, by_name=True)
+        model_rpn.load_weights(self.path, by_name=True)#Now model_path is 'gs://{bucket_name}/model_frcnn.hdf5'
+        model_classifier.load_weights(self.path, by_name=True)
     
         model_rpn.compile(optimizer='sgd', loss='mse')
         model_classifier.compile(optimizer='sgd', loss='mse')
@@ -148,13 +150,13 @@ class Predictor(object):
         bbox_threshold = 0.8
 
         for jk in range(R.shape[0]//C.num_rois + 1):
-            ROIs = np.expand_dims(R[self._config.num_rois*jk:self._config.num_rois*(jk+1), :], axis=0)
+            ROIs = np.expand_dims(R[self._config['num_rois']*jk:self._config['num_rois']*(jk+1), :], axis=0)
             if ROIs.shape[1] == 0:
                 break
-            if jk == R.shape[0]//self._config.num_rois:
+            if jk == R.shape[0]//self._config['num_rois']:
                 #pad R
                 curr_shape = ROIs.shape
-                target_shape = (curr_shape[0],self._config.num_rois,curr_shape[2])
+                target_shape = (curr_shape[0],self._config['num_rois'],curr_shape[2])
                 ROIs_padded = np.zeros(target_shape).astype(ROIs.dtype)
                 ROIs_padded[:, :curr_shape[1], :] = ROIs
                 ROIs_padded[0, curr_shape[1]:, :] = ROIs[0, 0, :]
@@ -172,14 +174,14 @@ class Predictor(object):
                 cls_num = np.argmax(P_cls[0, ii, :])
                 try:
                     (tx, ty, tw, th) = P_regr[0, ii, 4*cls_num:4*(cls_num+1)]
-                    tx /= self._config.classifier_regr_std[0]
-                    ty /= self._config.classifier_regr_std[1]
-                    tw /= self._config.classifier_regr_std[2]
-                    th /= self._config.classifier_regr_std[3]
+                    tx /= self._config['classifier_regr_std'][0]
+                    ty /= self._config['classifier_regr_std'][1]
+                    tw /= self._config['classifier_regr_std'][2]
+                    th /= self._config['classifier_regr_std'][3]
                     x, y, w, h = roi_helpers.apply_regr(x, y, w, h, tx, ty, tw, th)
                 except:
                     pass
-                bboxes[cls_name].append([self._config.rpn_stride*x, self._config.rpn_stride*y, self._config.rpn_stride*(x+w), self._config.rpn_stride*(y+h)])
+                bboxes[cls_name].append([self._config['rpn_stride']*x, self._config['rpn_stride']*y, self._config['rpn_stride']*(x+w), self._config['rpn_stride']*(y+h)])
                 probs[cls_name].append(np.max(P_cls[0, ii, :]))
         all_dets = []
 
@@ -212,11 +214,11 @@ class Predictor(object):
         Returns:
             An instance implementing this Predictor class.
         """
-        config_path = os.path.join(model_dir, 'config.pickle')#config file instance of class holding key parameters
+        model_path= os.path.join(model_dir,'model_frcnn.hdf5')#adding full path to model in cloud storage
+        config_path = os.path.join(model_dir, 'config.pickle')#config file is a dictionary holding key parameters
         with open(config_path, 'rb') as f_in:#140519# load config file from local path here
             config = pickle.load(f_in)
-            #NOTE:data unpickled here to config is an instance of Class Config in file trainer.config.Config, of whihc sub variables inside can
-            #be accessed in a way much like a method using config.xyz form.
+        #NOTE:data unpickled here to config is no more an instance of Class Config, instead confi.__dict__ dumped to a new pickle file; which now holds a mere dictionary. 
 
-        return cls(config)
+        return cls(model_path, config)
         #raise NotImplementedError()
