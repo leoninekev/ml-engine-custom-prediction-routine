@@ -149,7 +149,7 @@ class Predictor(object):
         probs = {}
         bbox_threshold = 0.8
 
-        for jk in range(R.shape[0]//C.num_rois + 1):
+        for jk in range(R.shape[0]//self._config['num_rois'] + 1):
             ROIs = np.expand_dims(R[self._config['num_rois']*jk:self._config['num_rois']*(jk+1), :], axis=0)
             if ROIs.shape[1] == 0:
                 break
