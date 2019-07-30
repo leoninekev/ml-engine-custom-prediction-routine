@@ -16,14 +16,14 @@
 from setuptools import setup, find_packages
 #import os
 
-NAME = 'test_code'
+NAME = 'test_code_new_model'
 VERSION = '0.1'
-REQUIRED_PACKAGES = ['pillow','keras','h5py']#170519; Pillow actually not needed ['keras','h5py']
+REQUIRED_PACKAGES = ['keras==2.2.0','h5py==2.8.0','opencv-contrib-python==3.4.0.12','scipy==1.1.0']
 
 
 setup(
     name=NAME,
     version=VERSION,
     packages=find_packages(),
-    install_requires=REQUIRED_PACKAGES,    
-    scripts=['predictor.py','roi_helpers.py','resnet.py','FixedBatchNormalization.py','RoiPoolingConv.py'])#,'data_generators.py','data_augment.py'])
+    install_requires=REQUIRED_PACKAGES,
+    scripts=['predictor.py','roi_helpers.py','resnet.py','FixedBatchNormalization.py','RoiPoolingConv.py'])
