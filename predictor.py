@@ -17,7 +17,7 @@ import scipy
 import numpy as np
 
 class MyPredictor(object):
-        """Interface for constructing custom predictors."""
+    """Interface for constructing custom predictors."""
     def __init__(self, config, model_rpn, model_classifier):
         self._config =config#this config holds the updated config dict edited in from_path method## {'verbose': True, 'network': 'resnet50', 'use_horizontal_flips': False, 'use_vertical_flips': False, 'rot_90': False, 'anchor_box_scales': [128, 256, 512], 'anchor_box_ratios': [[1, 1], [0.7071067811865475, 1.414213562373095], [1.414213562373095, 0.7071067811865475]], 'im_size': 600, 'img_channel_mean': [103.939, 116.779, 123.68], 'img_scaling_factor': 1.0, 'num_rois': 32, 'rpn_stride': 16, 'balanced_classes': False, 'std_scaling': 4.0, 'classifier_regr_std': [8.0, 8.0, 4.0, 4.0], 'rpn_min_overlap': 0.3, 'rpn_max_overlap': 0.7, 'classifier_min_overlap': 0.1, 'classifier_max_overlap': 0.5, 'class_mapping': {'cake': 0, 'donuts': 1, 'dosa': 2, 'bg': 3}, 'model_path': './model_frcnn.hdf5', 'base_net_weights': 'resnet50_weights_tf_dim_ordering_tf_kernels.h5'} #240519# manually entering dictionary values here config #loads the config file(as dictionary) generated after training
         self._model_rpn= model_rpn
