@@ -18,7 +18,7 @@ from setuptools import setup, find_packages
 
 NAME = 'test_code_new_model'
 VERSION = '0.1'
-REQUIRED_PACKAGES = ['keras==2.2.0','h5py==2.8.0','opencv-contrib-python==3.4.0.12','scipy==1.1.0']
+REQUIRED_PACKAGES = ['keras==2.2.0','h5py==2.8.0','opencv-contrib-python==4.2.0.32','scipy==1.1.0']
 
 
 setup(
